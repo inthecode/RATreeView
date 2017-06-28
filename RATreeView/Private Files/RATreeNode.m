@@ -25,7 +25,7 @@
 
 
 @interface RATreeNode () {
-  BOOL _expanded;
+    BOOL _expanded;
 }
 
 @property (nonatomic) BOOL expanded;
@@ -39,13 +39,13 @@
 
 - (id)initWithLazyItem:(RATreeNodeItem *)item expandedBlock:(BOOL (^)(id))expandedBlock;
 {
-  self = [super init];
-  if (self) {
-    _lazyItem = item;
-    _expandedBlock = expandedBlock;
-  }
-  
-  return self;
+    self = [super init];
+    if (self) {
+        _lazyItem = item;
+        _expandedBlock = expandedBlock;
+    }
+    
+    return self;
 }
 
 
@@ -53,23 +53,24 @@
 
 - (RATreeNodeItem *)item
 {
-  return self.lazyItem.item;
+    return self.lazyItem.item;
 }
 
 - (BOOL)expanded
 {
-  if (self.expandedBlock) {
-    _expanded = self.expandedBlock(self.item);
-    self.expandedBlock = nil;
-  }
-  
-  return _expanded;
+    if (self.expandedBlock) {
+        _expanded = self.expandedBlock(self.item);
+        self.expandedBlock = nil;
+    }
+    
+    return _expanded;
 }
 
 - (void)setExpanded:(BOOL)expanded
 {
-  self.expandedBlock = nil;
-  _expanded = expanded;
+    self.expandedBlock = nil;
+    _expanded = expanded;
 }
 
 @end
+

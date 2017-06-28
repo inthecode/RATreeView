@@ -31,3 +31,4 @@
 @property (nonatomic, strong) RABatchChanges *batchChanges;
 
 @end
+

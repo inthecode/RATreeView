@@ -23,104 +23,83 @@
 #import "RATreeView_ClassExtension.h"
 #import "RATreeView+Enums.h"
 #import "RATreeView+Private.h"
-#import "RATreeView+UIScrollView.h"
 
 #import "RABatchChanges.h"
 
 #import "RATreeNodeCollectionController.h"
 #import "RATreeNode.h"
 
+#import "RATableView.h"
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincomplete-implementation"
 @implementation RATreeView
 #pragma clang diagnostic pop
-
-//Managing the Display of Content
-@dynamic contentOffset;
-@dynamic contentSize;
-@dynamic contentInset;
-
-//Managing Scrolling
-@dynamic scrollEnabled;
-@dynamic directionalLockEnabled;
-@dynamic scrollsToTop;
-@dynamic pagingEnabled;
-@dynamic bounces;
-@dynamic alwaysBounceVertical;
-@dynamic alwaysBounceHorizontal;
-@dynamic canCancelContentTouches;
-@dynamic delaysContentTouches;
-@dynamic decelerationRate;
-@dynamic dragging;
-@dynamic tracking;
-@dynamic decelerating;
-
-//Managing the Scroll Indicator
-@dynamic indicatorStyle;
-@dynamic scrollIndicatorInsets;
-@dynamic showsHorizontalScrollIndicator;
-@dynamic showsVerticalScrollIndicator;
-//- (void)flashScrollIndicators;
-
-//Zooming and Panning
-@dynamic panGestureRecognizer;
-@dynamic pinchGestureRecognizer;
-@dynamic zoomScale;
-@dynamic maximumZoomScale;
-@dynamic minimumZoomScale;
-@dynamic zoomBouncing;
-@dynamic zooming;
-@dynamic bouncesZoom;
 
 
 #pragma mark Initializing a TreeView Object
 
 - (id)init
 {
-  return [self initWithFrame:CGRectMake(0, 0, 100, 100) style:RATreeViewStylePlain];
+    return [self initWithFrame:CGRectMake(0, 0, 100, 100) style:RATreeViewStylePlain];
 }
 
 - (id)initWithFrame:(CGRect)frame
 {
-  return [self initWithFrame:frame style:RATreeViewStylePlain];
+    return [self initWithFrame:frame style:RATreeViewStylePlain];
 }
 
 - (id)initWithFrame:(CGRect)frame style:(RATreeViewStyle)style
 {
-  self = [super initWithFrame:frame];
-  if (self) {
-    CGRect innerFrame = CGRectMake(0, 0, CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
-    [self commonInitWithFrame:innerFrame style:style];
-  }
-  return self;
+    self = [super initWithFrame:frame];
+    if (self) {
+        CGRect innerFrame = CGRectMake(0, 0, CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
+        [self commonInitWithFrame:innerFrame style:style];
+    }
+    return self;
 }
 
 - (id)initWithCoder:(NSCoder *)aDecoder
 {
-  self = [super initWithCoder:aDecoder];
-  if (self) {
-    CGRect innerFrame = CGRectMake(0, 0, CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
-    [self commonInitWithFrame:innerFrame style:RATreeViewStylePlain];
-  }
-  return self;
+    self = [super initWithCoder:aDecoder];
+    if (self) {
+        CGRect innerFrame = CGRectMake(0, 0, CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
+        [self commonInitWithFrame:innerFrame style:RATreeViewStylePlain];
+    }
+    return self;
 }
 
 - (void)commonInitWithFrame:(CGRect)frame style:(RATreeViewStyle)style
 {
-  UITableViewStyle tableViewStyle = [RATreeView tableViewStyleForTreeViewStyle:style];
+    UITableViewStyle tableViewStyle = [RATreeView tableViewStyleForTreeViewStyle:style];
+    
+    RATableView *tableView =  [[RATableView alloc] initWithFrame:frame style:tableViewStyle];
+    tableView.tableViewDelegate = (id<UITableViewDelegate>)self;
+    tableView.dataSource = (id<UITableViewDataSource>)self;
+    tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    tableView.backgroundColor = [UIColor clearColor];
+    
+    [self addSubview:tableView];
+    [self setTableView:tableView];
+    
+    self.expandsChildRowsWhenRowExpands = NO;
+    self.collapsesChildRowsWhenRowCollapses = NO;
+    self.rowsExpandingAnimation = RATreeViewRowAnimationTop;
+    self.rowsCollapsingAnimation = RATreeViewRowAnimationBottom;
+}
 
-  UITableView *tableView =  [[UITableView alloc] initWithFrame:frame style:tableViewStyle];
-  tableView.delegate = (id<UITableViewDelegate>)self;
-  tableView.dataSource = (id<UITableViewDataSource>)self;
-  tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-  tableView.backgroundColor = [UIColor clearColor];
-  [self addSubview:tableView];
-  [self setTableView:tableView];
+- (void)awakeFromNib
+{
+    [super awakeFromNib];
+    
+    self.tableView.backgroundColor = [UIColor clearColor];
+}
 
-  self.expandsChildRowsWhenRowExpands = NO;
-  self.collapsesChildRowsWhenRowCollapses = NO;
-  self.rowsExpandingAnimation = RATreeViewRowAnimationTop;
-  self.rowsCollapsingAnimation = RATreeViewRowAnimationBottom;
+#pragma mark Scroll View
+
+- (UIScrollView *)scrollView
+{
+    return self.tableView;
 }
 
 
@@ -128,119 +107,127 @@
 
 - (NSInteger)numberOfRows
 {
-  return [self.tableView numberOfRowsInSection:0];
+    return [self.tableView numberOfRowsInSection:0];
 }
 
 - (RATreeViewStyle)style
 {
-  UITableViewStyle tableViewStyle = self.tableView.style;
-  return [RATreeView treeViewStyleForTableViewStyle:tableViewStyle];
+    UITableViewStyle tableViewStyle = self.tableView.style;
+    return [RATreeView treeViewStyleForTableViewStyle:tableViewStyle];
 }
+
+#if TARGET_OS_IOS
 
 - (RATreeViewCellSeparatorStyle)separatorStyle
 {
-  RATreeViewCellSeparatorStyle style = [RATreeView treeViewCellSeparatorStyleForTableViewSeparatorStyle:self.tableView.separatorStyle];
-  return style;
+    RATreeViewCellSeparatorStyle style = [RATreeView treeViewCellSeparatorStyleForTableViewSeparatorStyle:self.tableView.separatorStyle];
+    return style;
 }
 
 - (void)setSeparatorStyle:(RATreeViewCellSeparatorStyle)separatorStyle
 {
-  UITableViewCellSeparatorStyle tableViewSeparatorStyle = [RATreeView tableViewCellSeparatorStyleForTreeViewCellSeparatorStyle:separatorStyle];
-  self.tableView.separatorStyle = tableViewSeparatorStyle;
+    UITableViewCellSeparatorStyle tableViewSeparatorStyle = [RATreeView tableViewCellSeparatorStyleForTreeViewCellSeparatorStyle:separatorStyle];
+    self.tableView.separatorStyle = tableViewSeparatorStyle;
 }
 
 - (UIColor *)separatorColor
 {
-  return self.tableView.separatorColor;
+    return self.tableView.separatorColor;
 }
 
 - (void)setSeparatorColor:(UIColor *)separatorColor
 {
-  self.tableView.separatorColor = separatorColor;
+    self.tableView.separatorColor = separatorColor;
 }
+
+#endif
 
 - (CGFloat)rowHeight
 {
-  return self.tableView.rowHeight;
+    return self.tableView.rowHeight;
 }
 
 - (void)setRowHeight:(CGFloat)rowHeight
 {
-  self.tableView.rowHeight = rowHeight;
+    self.tableView.rowHeight = rowHeight;
 }
 
 - (CGFloat)estimatedRowHeight
 {
-  if ([self.tableView respondsToSelector:@selector(estimatedRowHeight)]) {
-    return self.tableView.estimatedRowHeight;
-  } else {
-    return 0;
-  }
+    if ([self.tableView respondsToSelector:@selector(estimatedRowHeight)]) {
+        return self.tableView.estimatedRowHeight;
+    } else {
+        return 0;
+    }
 }
 
 - (void)setEstimatedRowHeight:(CGFloat)estimatedRowHeight
 {
-  if ([self.tableView respondsToSelector:@selector(estimatedRowHeight)]) {
-    self.tableView.estimatedRowHeight = estimatedRowHeight;
-  }
+    if ([self.tableView respondsToSelector:@selector(estimatedRowHeight)]) {
+        self.tableView.estimatedRowHeight = estimatedRowHeight;
+    }
 }
 
 - (UIEdgeInsets)separatorInset
 {
-  if ([self.tableView respondsToSelector:@selector(separatorInset)]) {
-    return self.tableView.separatorInset;
-  } else {
-    return UIEdgeInsetsZero;
-  }
+    if ([self.tableView respondsToSelector:@selector(separatorInset)]) {
+        return self.tableView.separatorInset;
+    } else {
+        return UIEdgeInsetsZero;
+    }
 }
 
 - (void)setSeparatorInset:(UIEdgeInsets)separatorInset
 {
-  if ([self.tableView respondsToSelector:@selector(separatorInset)]) {
-    self.tableView.separatorInset = separatorInset;
-  }
+    if ([self.tableView respondsToSelector:@selector(separatorInset)]) {
+        self.tableView.separatorInset = separatorInset;
+    }
 }
+
+#if TARGET_OS_IOS
 
 - (UIVisualEffect *)separatorEffect
 {
-  if ([self.tableView respondsToSelector:@selector(separatorEffect)]) {
-    return self.tableView.separatorEffect;
-  } else {
-    return nil;
-  }
+    if ([self.tableView respondsToSelector:@selector(separatorEffect)]) {
+        return self.tableView.separatorEffect;
+    } else {
+        return nil;
+    }
 }
 
 - (void)setSeparatorEffect:(UIVisualEffect *)separatorEffect
 {
-  if ([self.tableView respondsToSelector:@selector(separatorEffect)]) {
-    self.tableView.separatorEffect = separatorEffect;
-  }
+    if ([self.tableView respondsToSelector:@selector(separatorEffect)]) {
+        self.tableView.separatorEffect = separatorEffect;
+    }
 }
+
+#endif
 
 - (BOOL)cellLayoutMarginsFollowReadableWidth
 {
-  if ([self.tableView respondsToSelector:@selector(cellLayoutMarginsFollowReadableWidth)]) {
-    return self.tableView.cellLayoutMarginsFollowReadableWidth;
-  } else {
-    return NO;
-  }
+    if ([self.tableView respondsToSelector:@selector(cellLayoutMarginsFollowReadableWidth)]) {
+        return self.tableView.cellLayoutMarginsFollowReadableWidth;
+    } else {
+        return NO;
+    }
 }
 
 - (void)setCellLayoutMarginsFollowReadableWidth:(BOOL)cellLayoutMarginsFollowReadableWidth
 {
-  if ([self.tableView respondsToSelector:@selector(cellLayoutMarginsFollowReadableWidth)]) {
-    self.tableView.cellLayoutMarginsFollowReadableWidth = cellLayoutMarginsFollowReadableWidth;
-  }
+    if ([self.tableView respondsToSelector:@selector(cellLayoutMarginsFollowReadableWidth)]) {
+        self.tableView.cellLayoutMarginsFollowReadableWidth = cellLayoutMarginsFollowReadableWidth;
+    }
 }
 
 - (UIView *)backgroundView
 {
-  return self.tableView.backgroundView;
+    return self.tableView.backgroundView;
 }
 
 - (void)setBackgroundView:(UIView *)backgroundView
 {
-  self.tableView.backgroundView = backgroundView;
+    self.tableView.backgroundView = backgroundView;
 }
 
 -(UIColor *)selectedCollapsedBorderColor
@@ -264,42 +251,42 @@
 
 - (void)expandRowForItem:(id)item
 {
-  [self expandRowForItem:item withRowAnimation:self.rowsExpandingAnimation];
+    [self expandRowForItem:item withRowAnimation:self.rowsExpandingAnimation];
 }
 
 - (void)expandRowForItem:(id)item withRowAnimation:(RATreeViewRowAnimation)animation
 {
-  [self expandRowForItem:item expandChildren:NO withRowAnimation:animation];
+    [self expandRowForItem:item expandChildren:NO withRowAnimation:animation];
 }
 
 - (void)expandRowForItem:(id)item expandChildren:(BOOL)expandChildren withRowAnimation:(RATreeViewRowAnimation)animation
 {
-  NSIndexPath *indexPath = [self indexPathForItem:item];
-  RATreeNode *treeNode = [self treeNodeForIndexPath:indexPath];
-  if (!treeNode || treeNode.expanded) {
-    return;
-  }
-  [self expandCellForTreeNode:treeNode expandChildren:expandChildren withRowAnimation:animation];
+    NSIndexPath *indexPath = [self indexPathForItem:item];
+    RATreeNode *treeNode = [self treeNodeForIndexPath:indexPath];
+    if (!treeNode || treeNode.expanded) {
+        return;
+    }
+    [self expandCellForTreeNode:treeNode expandChildren:expandChildren withRowAnimation:animation];
 }
 
 - (void)collapseRowForItem:(id)item
 {
-  [self collapseRowForItem:item withRowAnimation:self.rowsCollapsingAnimation];
+    [self collapseRowForItem:item withRowAnimation:self.rowsCollapsingAnimation];
 }
 
 - (void)collapseRowForItem:(id)item withRowAnimation:(RATreeViewRowAnimation)animation
 {
-  [self collapseRowForItem:item collapseChildren:NO withRowAnimation:animation];
+    [self collapseRowForItem:item collapseChildren:NO withRowAnimation:animation];
 }
 
 - (void)collapseRowForItem:(id)item collapseChildren:(BOOL)collapseChildren withRowAnimation:(RATreeViewRowAnimation)animation
 {
-  NSIndexPath *indexPath = [self indexPathForItem:item];
-  RATreeNode *treeNode = [self treeNodeForIndexPath:indexPath];
-  if (!treeNode) {
-    return;
-  }
-  [self collapseCellForTreeNode:treeNode collapseChildren:collapseChildren withRowAnimation:animation];
+    NSIndexPath *indexPath = [self indexPathForItem:item];
+    RATreeNode *treeNode = [self treeNodeForIndexPath:indexPath];
+    if (!treeNode) {
+        return;
+    }
+    [self collapseCellForTreeNode:treeNode collapseChildren:collapseChildren withRowAnimation:animation];
 }
 
 
@@ -307,36 +294,36 @@
 
 - (void)beginUpdates
 {
-  [self.tableView beginUpdates];
-  [self.batchChanges beginUpdates];
+    [self.tableView beginUpdates];
+    [self.batchChanges beginUpdates];
 }
 
 - (void)endUpdates
 {
-  [self.batchChanges endUpdates];
-  [self.tableView endUpdates];
+    [self.batchChanges endUpdates];
+    [self.tableView endUpdates];
 }
 
 - (void)insertItemsAtIndexes:(NSIndexSet *)indexes inParent:(id)parent withAnimation:(RATreeViewRowAnimation)animation
 {
-  if (parent && ![self isCellForItemExpanded:parent]) {
-    return;
-  }
-  __weak typeof(self) weakSelf = self;
-  [indexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-    [weakSelf insertItemAtIndex:idx inParent:parent withAnimation:animation];
-  }];
+    if (parent && ![self isCellForItemExpanded:parent]) {
+        return;
+    }
+    __weak __typeof(self) weakSelf = self;
+    [indexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
+        [weakSelf insertItemAtIndex:idx inParent:parent withAnimation:animation];
+    }];
 }
 
 - (void)deleteItemsAtIndexes:(NSIndexSet *)indexes inParent:(id)parent withAnimation:(RATreeViewRowAnimation)animation
 {
-  if (parent && ![self isCellForItemExpanded:parent]) {
-    return;
-  }
-  __weak typeof(self) weakSelf = self;
-  [indexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
-    [weakSelf removeItemAtIndex:idx inParent:parent withAnimation:animation];
-  }];
+    if (parent && ![self isCellForItemExpanded:parent]) {
+        return;
+    }
+    __weak __typeof(self) weakSelf = self;
+    [indexes enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL *stop) {
+        [weakSelf removeItemAtIndex:idx inParent:parent withAnimation:animation];
+    }];
 }
 
 
@@ -344,17 +331,17 @@
 
 - (void)registerNib:(UINib *)nib forCellReuseIdentifier:(NSString *)identifier
 {
-  [self.tableView registerNib:nib forCellReuseIdentifier:identifier];
+    [self.tableView registerNib:nib forCellReuseIdentifier:identifier];
 }
 
 - (void)registerClass:(Class)cellClass forCellReuseIdentifier:(NSString *)identifier
 {
-  [self.tableView registerClass:cellClass forCellReuseIdentifier:identifier];
+    [self.tableView registerClass:cellClass forCellReuseIdentifier:identifier];
 }
 
 - (id)dequeueReusableCellWithIdentifier:(NSString *)identifier
 {
-  return [self.tableView dequeueReusableCellWithIdentifier:identifier];
+    return [self.tableView dequeueReusableCellWithIdentifier:identifier];
 }
 
 
@@ -362,37 +349,37 @@
 
 - (void)registerNib:(UINib *)nib forHeaderFooterViewReuseIdentifier:(NSString *)identifier
 {
-  [self.tableView registerNib:nib forHeaderFooterViewReuseIdentifier:identifier];
+    [self.tableView registerNib:nib forHeaderFooterViewReuseIdentifier:identifier];
 }
 
 - (void)registerClass:(Class)aClass forHeaderFooterViewReuseIdentifier:(NSString *)identifier
 {
-  [self.tableView registerClass:aClass forHeaderFooterViewReuseIdentifier:identifier];
+    [self.tableView registerClass:aClass forHeaderFooterViewReuseIdentifier:identifier];
 }
 
 - (id)dequeueReusableHeaderFooterViewWithIdentifier:(NSString *)identifier
 {
-  return [self.tableView dequeueReusableHeaderFooterViewWithIdentifier:identifier];
+    return [self.tableView dequeueReusableHeaderFooterViewWithIdentifier:identifier];
 }
 
 - (UIView *)treeHeaderView
 {
-  return self.tableView.tableHeaderView;
+    return self.tableView.tableHeaderView;
 }
 
 - (void)setTreeHeaderView:(UIView *)treeHeaderView
 {
-  self.tableView.tableHeaderView = treeHeaderView;
+    self.tableView.tableHeaderView = treeHeaderView;
 }
 
 - (UIView *)treeFooterView
 {
-  return self.tableView.tableFooterView;
+    return self.tableView.tableFooterView;
 }
 
 - (void)setTreeFooterView:(UIView *)treeFooterView
 {
-  self.tableView.tableFooterView = treeFooterView;
+    self.tableView.tableFooterView = treeFooterView;
 }
 
 
@@ -400,34 +387,34 @@
 
 - (BOOL)isCellForItemExpanded:(id)item
 {
-  NSIndexPath *indexPath = [self indexPathForItem:item];
-  return [self treeNodeForIndexPath:indexPath].expanded;
+    NSIndexPath *indexPath = [self indexPathForItem:item];
+    return [self treeNodeForIndexPath:indexPath].expanded;
 }
 
 - (BOOL)isCellExpanded:(UITableViewCell *)cell
 {
-  id item = [self itemForCell:cell];
-  return [self isCellForItemExpanded:item];
+    id item = [self itemForCell:cell];
+    return [self isCellForItemExpanded:item];
 }
 
 #pragma mark - Working with Indentation
 
 - (NSInteger)levelForCellForItem:(id)item
 {
-  return [self.treeNodeCollectionController levelForItem:item];
+    return [self.treeNodeCollectionController levelForItem:item];
 }
 
 - (NSInteger)levelForCell:(UITableViewCell *)cell
 {
-  id item = [self itemForCell:cell];
-  return [self levelForCellForItem:item];
+    id item = [self itemForCell:cell];
+    return [self levelForCellForItem:item];
 }
 
 #pragma mark - Getting the Parent for an Item
 
 - (id)parentForItem:(id)item
 {
-  return [self.treeNodeCollectionController parentForItem:item];
+    return [self.treeNodeCollectionController parentForItem:item];
 }
 
 
@@ -435,37 +422,37 @@
 
 - (UITableViewCell *)cellForItem:(id)item
 {
-  NSIndexPath *indexPath = [self indexPathForItem:item];
-  return [self.tableView cellForRowAtIndexPath:indexPath];
+    NSIndexPath *indexPath = [self indexPathForItem:item];
+    return [self.tableView cellForRowAtIndexPath:indexPath];
 }
 
 - (NSArray *)visibleCells
 {
-  return [self.tableView visibleCells];
+    return [self.tableView visibleCells];
 }
 
 - (id)itemForCell:(UITableViewCell *)cell
 {
-  NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
-  return [self treeNodeForIndexPath:indexPath].item;
+    NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
+    return [self treeNodeForIndexPath:indexPath].item;
 }
 
 - (id)itemForRowAtPoint:(CGPoint)point
 {
-  NSIndexPath *indexPath = [self.tableView indexPathForRowAtPoint:point];
-  return !indexPath ? nil : [self treeNodeForIndexPath:indexPath].item;
+    NSIndexPath *indexPath = [self.tableView indexPathForRowAtPoint:point];
+    return !indexPath ? nil : [self treeNodeForIndexPath:indexPath].item;
 }
 
 - (id)itemsForRowsInRect:(CGRect)rect
 {
-  NSArray *indexPaths = [self.tableView indexPathsForRowsInRect:rect];
-  return [self itemsForIndexPaths:indexPaths];
+    NSArray *indexPaths = [self.tableView indexPathsForRowsInRect:rect];
+    return [self itemsForIndexPaths:indexPaths];
 }
 
 - (NSArray *)itemsForVisibleRows
 {
-  NSArray *indexPaths = [self.tableView indexPathsForVisibleRows];
-  return [self itemsForIndexPaths:indexPaths];
+    NSArray *indexPaths = [self.tableView indexPathsForVisibleRows];
+    return [self itemsForIndexPaths:indexPaths];
 }
 
 
@@ -473,15 +460,15 @@
 
 - (void)scrollToRowForItem:(id)item atScrollPosition:(RATreeViewScrollPosition)scrollPosition animated:(BOOL)animated
 {
-  NSIndexPath *indexPath = [self indexPathForItem:item];
-  UITableViewScrollPosition tableViewScrollPosition = [RATreeView tableViewScrollPositionForTreeViewScrollPosition:scrollPosition];
-  [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:tableViewScrollPosition animated:animated];
+    NSIndexPath *indexPath = [self indexPathForItem:item];
+    UITableViewScrollPosition tableViewScrollPosition = [RATreeView tableViewScrollPositionForTreeViewScrollPosition:scrollPosition];
+    [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:tableViewScrollPosition animated:animated];
 }
 
 - (void)scrollToNearestSelectedRowAtScrollPosition:(RATreeViewScrollPosition)scrollPosition animated:(BOOL)animated
 {
-  UITableViewScrollPosition tableViewScrollPosition = [RATreeView tableViewScrollPositionForTreeViewScrollPosition:scrollPosition];
-  [self.tableView scrollToNearestSelectedRowAtScrollPosition:tableViewScrollPosition animated:animated];
+    UITableViewScrollPosition tableViewScrollPosition = [RATreeView tableViewScrollPositionForTreeViewScrollPosition:scrollPosition];
+    [self.tableView scrollToNearestSelectedRowAtScrollPosition:tableViewScrollPosition animated:animated];
 }
 
 
@@ -489,71 +476,71 @@
 
 - (id)itemForSelectedRow
 {
-  NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
-  return [self treeNodeForIndexPath:indexPath].item;
+    NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
+    return [self treeNodeForIndexPath:indexPath].item;
 }
 
 - (NSArray *)itemsForSelectedRows
 {
-  NSArray *selectedRows = [self.tableView indexPathsForSelectedRows];
-  return [self itemsForIndexPaths:selectedRows];
+    NSArray *selectedRows = [self.tableView indexPathsForSelectedRows];
+    return [self itemsForIndexPaths:selectedRows];
 }
 
 - (void)selectRowForItem:(id)item animated:(BOOL)animated scrollPosition:(RATreeViewScrollPosition)scrollPosition
 {
-  if ([self isCellForItemExpanded:[self parentForItem:item]]) {
-    NSIndexPath *indexPath = [self indexPathForItem:item];
-    UITableViewScrollPosition tableViewScrollPosition = [RATreeView tableViewScrollPositionForTreeViewScrollPosition:scrollPosition];
-    [self.tableView selectRowAtIndexPath:indexPath animated:animated scrollPosition:tableViewScrollPosition];
-  }
+    if ([self isCellForItemExpanded:[self parentForItem:item]]) {
+        NSIndexPath *indexPath = [self indexPathForItem:item];
+        UITableViewScrollPosition tableViewScrollPosition = [RATreeView tableViewScrollPositionForTreeViewScrollPosition:scrollPosition];
+        [self.tableView selectRowAtIndexPath:indexPath animated:animated scrollPosition:tableViewScrollPosition];
+    }
 }
 
 - (void)deselectRowForItem:(id)item animated:(BOOL)animated
 {
-  if ([self isCellForItemExpanded:[self parentForItem:item]]) {
-    NSIndexPath *indexPath = [self indexPathForItem:item];
-    [self.tableView deselectRowAtIndexPath:indexPath animated:animated];
-  }
+    if ([self isCellForItemExpanded:[self parentForItem:item]]) {
+        NSIndexPath *indexPath = [self indexPathForItem:item];
+        [self.tableView deselectRowAtIndexPath:indexPath animated:animated];
+    }
 }
 
 - (BOOL)allowsSelection
 {
-  return self.tableView.allowsSelection;
+    return self.tableView.allowsSelection;
 }
 
 - (void)setAllowsSelection:(BOOL)allowsSelection
 {
-  self.tableView.allowsSelection = allowsSelection;
+    self.tableView.allowsSelection = allowsSelection;
 }
 
 - (BOOL)allowsMultipleSelection
 {
-  return self.tableView.allowsMultipleSelection;
+    return self.tableView.allowsMultipleSelection;
 }
 
 - (void)setAllowsMultipleSelection:(BOOL)allowsMultipleSelection
 {
-  self.tableView.allowsMultipleSelection = allowsMultipleSelection;
+    self.tableView.allowsMultipleSelection = allowsMultipleSelection;
 }
 
 - (BOOL)allowsSelectionDuringEditing
 {
-  return self.tableView.allowsSelectionDuringEditing;
+    return self.tableView.allowsSelectionDuringEditing;
 }
 
 - (void)setAllowsSelectionDuringEditing:(BOOL)allowsSelectionDuringEditing
 {
-  self.tableView.allowsSelectionDuringEditing = allowsSelectionDuringEditing;
+    self.tableView.allowsSelectionDuringEditing = allowsSelectionDuringEditing;
 }
 
 - (BOOL)allowsMultipleSelectionDuringEditing
 {
-  return self.tableView.allowsMultipleSelectionDuringEditing;
+    return self.tableView.allowsMultipleSelectionDuringEditing;
 }
 
 - (void)setAllowsMultipleSelectionDuringEditing:(BOOL)allowsMultipleSelectionDuringEditing
 {
-  self.tableView.allowsMultipleSelectionDuringEditing = allowsMultipleSelectionDuringEditing;
+    self.tableView.allowsMultipleSelectionDuringEditing = allowsMultipleSelectionDuringEditing;
 }
 
 
@@ -561,17 +548,17 @@
 
 - (BOOL)isEditing
 {
-  return self.tableView.isEditing;
+    return self.tableView.isEditing;
 }
 
 - (void)setEditing:(BOOL)editing
 {
-  self.tableView.editing = editing;
+    self.tableView.editing = editing;
 }
 
 - (void)setEditing:(BOOL)editing animated:(BOOL)animated
 {
-  [self.tableView setEditing:editing animated:animated];
+    [self.tableView setEditing:editing animated:animated];
 }
 
 
@@ -579,26 +566,26 @@
 
 - (void)reloadData
 {
-  [self setupTreeStructure];
-  [self.tableView reloadData];
+    [self setupTreeStructure];
+    [self.tableView reloadData];
 }
 
 - (void)reloadRowsForItems:(NSArray *)items withRowAnimation:(RATreeViewRowAnimation)animation
 {
-  NSMutableArray *indexes = [NSMutableArray array];
-  UITableViewRowAnimation tableViewRowAnimation = [RATreeView tableViewRowAnimationForTreeViewRowAnimation:animation];
-  for (id item in items) {
-    NSIndexPath *indexPath = [self indexPathForItem:item];
-    [indexes addObject:indexPath];
-  }
-
-  [self.tableView reloadRowsAtIndexPaths:indexes withRowAnimation:tableViewRowAnimation];
+    NSMutableArray *indexes = [NSMutableArray array];
+    UITableViewRowAnimation tableViewRowAnimation = [RATreeView tableViewRowAnimationForTreeViewRowAnimation:animation];
+    for (id item in items) {
+        NSIndexPath *indexPath = [self indexPathForItem:item];
+        [indexes addObject:indexPath];
+    }
+    
+    [self.tableView reloadRowsAtIndexPaths:indexes withRowAnimation:tableViewRowAnimation];
 }
 
 - (void)reloadRows
 {
-  NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:0];
-  [self.tableView reloadSections:indexSet withRowAnimation:UITableViewRowAnimationNone];
+    NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:0];
+    [self.tableView reloadSections:indexSet withRowAnimation:UITableViewRowAnimationNone];
 }
 
 
@@ -606,27 +593,27 @@
 
 - (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
 {
-  [self.tableView setContentOffset:contentOffset animated:animated];
+    [self.tableView setContentOffset:contentOffset animated:animated];
 }
 
 - (void)scrollRectToVisible:(CGRect)visible animated:(BOOL)animated
 {
-  [self.tableView scrollRectToVisible:visible animated:animated];
+    [self.tableView scrollRectToVisible:visible animated:animated];
 }
 
 - (void)setZoomScale:(CGFloat)zoomScale animated:(BOOL)animated
 {
-  [self.tableView setZoomScale:zoomScale animated:animated];
+    [self.tableView setZoomScale:zoomScale animated:animated];
 }
 
 - (void)flashScrollIndicators
 {
-  [self.tableView flashScrollIndicators];
+    [self.tableView flashScrollIndicators];
 }
 
 - (void)zoomToRect:(CGRect)rect animated:(BOOL)animated
 {
-  [self.tableView zoomToRect:rect animated:animated];
+    [self.tableView zoomToRect:rect animated:animated];
 }
 
 
@@ -634,12 +621,16 @@
 
 - (NSArray *)itemsForIndexPaths:(NSArray *)indexPaths
 {
-  NSMutableArray *items = [NSMutableArray array];
-  for (NSIndexPath *indexPath in indexPaths) {
-    [items addObject:[self treeNodeForIndexPath:indexPath].item];
-  }
-
-  return [items copy];
+    if (!indexPaths) {
+        return nil;
+    }
+    NSMutableArray *items = [NSMutableArray array];
+    for (NSIndexPath *indexPath in indexPaths) {
+        [items addObject:[self treeNodeForIndexPath:indexPath].item];
+    }
+    
+    return [items copy];
 }
 
 @end
+

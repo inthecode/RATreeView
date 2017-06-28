@@ -25,7 +25,7 @@
 
 
 @interface RATreeNode : NSObject
- 
+
 @property (nonatomic, readonly) BOOL expanded;
 @property (nonatomic, assign) BOOL selected;
 @property (strong, nonatomic, readonly) id item;
