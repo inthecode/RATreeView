@@ -130,6 +130,9 @@
         [controller removeChildControllersAtIndexes:indexesForDeletions];
         [controller insertChildControllers:childControllersToInsert atIndexes:indexesForInsertions];
         
+        if (controller.childControllers.count == 1)
+            expandChildren = YES;
+        
         if (expandChildren) {
             for (RATreeNodeController *nodeController in controller.childControllers) {
                 [items addObject:nodeController.treeNode.item];
